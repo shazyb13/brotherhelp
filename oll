@@ -1,0 +1,262 @@
+player script:
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+public class Player : MonoBehaviour
+{
+    [SerializeField]
+    public float speed = 7.5f;
+    [SerializeField]
+    public GameObject laserprefab;
+    [SerializeField]
+    private GameObject tripleshotprefab;
+    [SerializeField]
+    private float firerate = 0.5f;
+    private float canfire = -0.5f;
+    [SerializeField]
+    private int lives = 3;
+    private spawnmanager spawnmanager;
+    [SerializeField]
+    public bool istripleshotactive = false;
+    [SerializeField]
+    // Start is called before the first frame update
+    void Start()
+    {
+        transform.position = new Vector3(0, -1, 0);
+        spawnmanager = GameObject.Find("spawnmanager").GetComponent<spawnmanager>();
+
+        if (spawnmanager == null) 
+        Debug.LogError("the spawn manager is null");
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        CalculateMovement();
+
+        if (Input.GetKeyDown(KeyCode.Space)&& Time.time > canfire) 
+        {
+           Firelaser();
+           canfire = Time.time + firerate;
+           Instantiate(laserprefab, transform.position + new Vector3(0, -0.19f, 0),Quaternion.identity);
+        
+        }
+
+
+    }
+     
+    void CalculateMovement()
+    {         
+        float verticalinput = Input.GetAxis("Vertical");
+        float horizontalinput = Input.GetAxis("Horizontal");
+        transform.Translate(Vector3.right * horizontalinput * speed * Time.deltaTime);
+
+        transform.Translate(Vector3.up * verticalinput * speed * Time.deltaTime);
+
+        if (transform.position.y >= -1)
+        {
+            transform.position = new Vector3(transform.position.x, -1, 0);
+        }
+        else if (transform.position.y <= -3.9f) 
+        {
+            transform.position = new Vector3(transform.position.x, -3.9f, 0);
+        }
+        if (transform.position.x > 10.6f)
+        {
+            transform.position = new Vector3(-10.6f, transform.position.y, 0);
+        }
+        else if(transform.position.x < -10.6f)
+        {
+            transform.position = new Vector3(10.6f, transform.position.y, 0);
+        }
+
+    }
+
+    void Firelaser()
+    {
+        canfire = Time.time + firerate;
+
+        if (istripleshotactive == true)
+        {
+            Instantiate(tripleshotprefab, transform.position, Quaternion.identity);
+        }
+        else
+        {
+            Instantiate(laserprefab, transform.position + new Vector3(0, 1.5f, 0), Quaternion.identity);
+        }
+    }
+
+    public void damage()
+    {
+        lives -= 1;
+
+        if (lives < 1)
+        {
+
+            spawnmanager.onplayerdeath();
+            Destroy(this.gameObject);
+        }
+    }
+}
+
+laser script:
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+public class laser : MonoBehaviour
+{
+    private float speed = 18.0f;
+    // Start is called before the first frame update
+    void Start()
+    {
+        
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        transform.Translate(Vector3.up  * speed * Time.deltaTime);
+
+        if (transform.position.y > 8.0f)
+        {
+
+            Destroy(this.gameObject);
+            
+        
+     
+        
+            
+        }
+    }
+}
+spawn manager script:
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+public class spawnmanager : MonoBehaviour
+{
+    [SerializeField]
+    private GameObject Emenyprefab;
+    [SerializeField]
+    private GameObject emenycontainer;
+
+    private bool stopspawing = false;
+    // Start is called before the first frame update
+    void Start()
+    {
+        StartCoroutine(spawnroutine());
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+    IEnumerator spawnroutine()
+    {
+        while (stopspawing == false)
+        {
+            Vector3 postospawn = new Vector3(Random.Range(-8f, 8f), 7, 0);
+            GameObject newemeny = Instantiate(Emenyprefab, postospawn, Quaternion.identity);
+            newemeny.transform.parent = emenycontainer.transform;
+            yield return new WaitForSeconds(7.0f);
+        }
+    }
+    public void onplayerdeath()
+    {
+        stopspawing =true;
+    }
+
+
+}
+enemy script:
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+public class enemy : MonoBehaviour
+{
+    [SerializeField]
+    private float speed = 4.0f;
+    // Start is called before the first frame update
+    void Start()
+    {
+        
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        transform.Translate (Vector3.down * speed * Time.deltaTime);
+
+        if (transform.position.y < -5f)
+        {
+            float randomX = Random.Range(-8f, 8f);
+            transform.position = new Vector3(randomX, 7, 0);
+        }
+    }
+    private void OnTriggerExit2D(Collider2D other)
+    {
+        if (other.tag == "Player") 
+        {
+            Player player = other.transform.GetComponent<Player>();
+            if (player != null)
+            {
+                player.damage();
+            }
+            Destroy(this.gameObject);
+        }
+
+        if (other.tag == "laser")
+        {
+            Destroy(other.gameObject);
+            Destroy(this.gameObject);
+        }
+    }
+}
+
+
+powerup script:
+using System.Collections;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using Unity.VisualScripting;
+using UnityEngine;
+
+public class powerup : MonoBehaviour
+{
+    [SerializeField]
+    private float speed = 3.0f;
+    // Start is called before the first frame update
+    void Start()
+    {
+        
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        transform.Translate(Vector3.down * speed * Time.deltaTime);
+
+        if(transform.position.y < -4.5f)
+        {
+            Destroy(this.gameObject);
+        }
+}
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (other.tag == "player")
+        {
+            Destroy(this.gameObject);
+        }
+    }
+}
+
